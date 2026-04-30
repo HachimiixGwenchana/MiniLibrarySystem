@@ -49,7 +49,29 @@ show_file()
 
 
 # ==============================================================
+# MODE "a" — APPEND to end of file
+# ==============================================================
+print("\n" + "=" * 35)
+print('MODE "a" — Append')
+print("=" * 35)
+
+with open(PROJECT_FILE, "a") as f:        # "a" mode
+    f.write("Book Added: Python Crash Course\n")
+    f.write("Book Added: Eloquent JavaScript\n")
+
+print("Books appended successfully!")
+show_file()
+
+
+# ==============================================================
 # SUMMARY
 # ==============================================================
 print('  "x" = Safe create  (fails if file exists)')
-print('  "w" = Always write (overwrites if exists) ')
+print('  "w" = Always write (overwrites if exists)')
+print('  "a" = Append      (adds to end of file)')
+
+def student_b_append(book_title):
+    # 'a' appends to the end of the file
+    with open(PROJECT_FILE, "a") as file:
+        file.write(f"Book Added: {book_title}\n")
+    print(f"Student B: Appended '{book_title}' to log.")
