@@ -2,3 +2,5 @@ Project: Mini Library System
 Version: 2.0
 Status : Reset
 Books  : (empty)
+Book Added: Python Crash Course
+Book Added: Eloquent JavaScript

@@ -75,3 +75,17 @@ def student_b_append(book_title):
     with open(PROJECT_FILE, "a") as file:
         file.write(f"Book Added: {book_title}\n")
     print(f"Student B: Appended '{book_title}' to log.")
+
+
+def student_c_read_count():
+    # 'r' opens for reading
+    if not os.path.exists(PROJECT_FILE):
+        print("Student C: Error - File does not exist.")
+        return
+
+    with open(PROJECT_FILE, "r") as file:
+        lines = file.readlines()
+        print("Student C: Reading log...")
+        for line in lines:
+            print(f" > {line.strip()}")
+        print(f"Total entries: {len(lines)}")
