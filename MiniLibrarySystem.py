@@ -1,52 +1,92 @@
-# ============================================================
-# MINI LIBRARY SYSTEM — Updated Version
-# Added: D = pull/push (update file content)
-#        ALL MEMBERS: Search + Delete
-# ============================================================
 
-import json
-import os
-from datetime import datetime
 
 DATA_FILE = "library_data.txt"
 
 
 # ==============================================================
-# PULL — Load data from file (read)
+# PULL — Read data from .txt file into memory (lists)
 # ==============================================================
 def pull():
-    """Pull: reads current data from file into memory."""
+    """
+    Reads library_data.txt line by line and loads
+    books and members into memory as lists of dicts.
+    """
+    books   = []
+    members = []
+
     try:
         with open(DATA_FILE, "r") as f:
-            return json.load(f)
+            section = None
+
+            for line in f:
+                line = line.strip()
+
+                if line == "[BOOKS]":
+                    section = "books"
+                elif line == "[MEMBERS]":
+                    section = "members"
+                elif line == "" or line.startswith("#"):
+                    continue
+
+                elif section == "books":
+                    # Format: id|title|author|status
+                    parts = line.split("|")
+                    if len(parts) == 4:
+                        books.append({
+                            "id"     : int(parts[0]),
+                            "title"  : parts[1],
+                            "author" : parts[2],
+                            "status" : parts[3]
+                        })
+
+                elif section == "members":
+                    # Format: id|name|email
+                    parts = line.split("|")
+                    if len(parts) == 3:
+                        members.append({
+                            "id"    : int(parts[0]),
+                            "name"  : parts[1],
+                            "email" : parts[2]
+                        })
+
     except FileNotFoundError:
-        # First run — initialize fresh data
-        return {
-            "next_book_id"   : 4,
-            "next_member_id" : 3,
-            "books": [
-                {"id": 1, "title": "Harry Potter",  "author": "J.K. Rowling",        "status": "Available"},
-                {"id": 2, "title": "The Alchemist", "author": "Paulo Coelho",         "status": "Available"},
-                {"id": 3, "title": "Clean Code",    "author": "Robert C. Martin",     "status": "Available"},
-            ],
-            "members": [
-                {"id": 1, "name": "Alice Santos", "email": "alice@email.com"},
-                {"id": 2, "name": "Bob Reyes",    "email": "bob@email.com"},
-            ]
-        }
-    except json.JSONDecodeError:
-        print("⚠️  File corrupted. Starting fresh.")
-        return {"next_book_id": 1, "next_member_id": 1, "books": [], "members": []}
+        # First run — seed default data
+        books = [
+            {"id": 1, "title": "Harry Potter",  "author": "J.K. Rowling",    "status": "Available"},
+            {"id": 2, "title": "The Alchemist", "author": "Paulo Coelho",    "status": "Available"},
+            {"id": 3, "title": "Clean Code",    "author": "Robert C. Martin","status": "Available"},
+        ]
+        members = [
+            {"id": 1, "name": "Alice Santos", "email": "alice@email.com"},
+            {"id": 2, "name": "Bob Reyes",    "email": "bob@email.com"},
+        ]
+
+    return books, members
 
 
 # ==============================================================
-# PUSH — Save updated data back to file (write)
+# PUSH — Write memory data back to .txt file
 # ==============================================================
-def push(data):
-    """Push: writes updated memory data back into the file."""
+def push(books, members):
+    """
+    Writes all books and members into library_data.txt
+    using plain text with | as separator.
+    """
     with open(DATA_FILE, "w") as f:
-        json.dump(data, f, indent=4)
-    print("  💾 Data pushed (saved) to file successfully.")
+        f.write("# ========================\n")
+        f.write("# LIBRARY DATA FILE\n")
+        f.write("# Format: id|field1|field2|...\n")
+        f.write("# ========================\n\n")
+
+        f.write("[BOOKS]\n")
+        for b in books:
+            f.write(f"{b['id']}|{b['title']}|{b['author']}|{b['status']}\n")
+
+        f.write("\n[MEMBERS]\n")
+        for m in members:
+            f.write(f"{m['id']}|{m['name']}|{m['email']}\n")
+
+    print("  💾 Data saved to library_data.txt")
 
 
 # ==============================================================
@@ -60,85 +100,87 @@ def divider(title):
 def pause():
     input("\n  Press Enter to continue...")
 
+def next_id(lst):
+    """Auto-generate next ID from a list of dicts."""
+    return max((i["id"] for i in lst), default=0) + 1
+
 
 # ==============================================================
-# BOOKS MENU
+# BOOKS
 # ==============================================================
-def add_book(data):
+def view_books(books):
+    divider("ALL BOOKS")
+    if not books:
+        print("  📭 No books yet.")
+        return
+    print(f"  {'ID':<5} {'Title':<25} {'Author':<22} {'Status'}")
+    print("  " + "-" * 65)
+    for b in books:
+        icon = "✅" if b["status"] == "Available" else "📖"
+        print(f"  {b['id']:<5} {b['title']:<25} {b['author']:<22} {icon} {b['status']}")
+
+def add_book(books, members):
     divider("ADD BOOK")
     title  = input("  Title  : ").strip()
     author = input("  Author : ").strip()
     if not title or not author:
         print("  ❌ Title and author cannot be empty.")
         return
-    data["books"].append({
-        "id"     : data["next_book_id"],
+    books.append({
+        "id"     : next_id(books),
         "title"  : title,
         "author" : author,
         "status" : "Available"
     })
-    data["next_book_id"] += 1
-    push(data)                              # PUSH after update
+    push(books, members)                    # PUSH after change
     print(f"  ✅ Book '{title}' added!")
 
-def view_books(data):
-    divider("ALL BOOKS")
-    if not data["books"]:
-        print("  📭 No books yet.")
-        return
-    print(f"  {'ID':<5} {'Title':<25} {'Author':<22} {'Status'}")
-    print("  " + "-" * 65)
-    for b in data["books"]:
-        icon = "✅" if b["status"] == "Available" else "📖"
-        print(f"  {b['id']:<5} {b['title']:<25} {b['author']:<22} {icon} {b['status']}")
-
 
 # ==============================================================
-# MEMBERS — View All
+# MEMBERS — View
 # ==============================================================
-def view_members(data):
+def view_members(members):
     divider("ALL MEMBERS")
-    if not data["members"]:
+    if not members:
         print("  📭 No members yet.")
         return
     print(f"  {'ID':<5} {'Name':<25} {'Email'}")
-    print("  " + "-" * 55)
-    for m in data["members"]:
+    print("  " + "-" * 50)
+    for m in members:
         print(f"  {m['id']:<5} {m['name']:<25} {m['email']}")
 
 
 # ==============================================================
 # MEMBERS — Add
 # ==============================================================
-def add_member(data):
+def add_member(books, members):
     divider("ADD MEMBER")
     name  = input("  Name  : ").strip()
     email = input("  Email : ").strip()
     if not name or not email:
         print("  ❌ Name and email cannot be empty.")
         return
-    data["members"].append({
-        "id"    : data["next_member_id"],
+    members.append({
+        "id"    : next_id(members),
         "name"  : name,
         "email" : email
     })
-    data["next_member_id"] += 1
-    push(data)                              # PUSH after update
+    push(books, members)                    # PUSH after change
     print(f"  ✅ Member '{name}' added!")
 
 
 # ==============================================================
-# MEMBERS — D: Search (pull latest → search → display)
+# MEMBERS — Search
 # ==============================================================
-def search_member(data):
+def search_member(books, members):
     divider("SEARCH MEMBER")
 
     print("  🔄 Pulling latest data from file...")
-    data.update(pull())                     # PULL before search
+    books[:], members[:] = pull()           # PULL latest before search
 
-    keyword = input("  Enter name or email to search: ").strip().lower()
+    keyword = input("  Enter name or email: ").strip().lower()
     results = [
-        m for m in data["members"]
+        m for m in members
         if keyword in m["name"].lower() or keyword in m["email"].lower()
     ]
 
@@ -154,15 +196,49 @@ def search_member(data):
 
 
 # ==============================================================
-# MEMBERS — D: Delete (pull → delete → push)
+# MEMBERS — Update (D: pull → edit → push)
 # ==============================================================
-def delete_member(data):
-    divider("DELETE MEMBER")
+def update_member(books, members):
+    divider("UPDATE MEMBER  (pull → edit → push)")
 
     print("  🔄 Pulling latest data from file...")
-    data.update(pull())                     # PULL before delete
+    books[:], members[:] = pull()           # PULL before update
 
-    view_members(data)
+    view_members(members)
+
+    try:
+        member_id = int(input("\n  Enter Member ID to update: "))
+    except ValueError:
+        print("  ❌ Invalid ID.")
+        return
+
+    for m in members:
+        if m["id"] == member_id:
+            print(f"\n  Current Name  : {m['name']}")
+            print(f"  Current Email : {m['email']}")
+            new_name  = input("\n  New Name  (Enter to keep): ").strip()
+            new_email = input("  New Email (Enter to keep): ").strip()
+
+            if new_name:  m["name"]  = new_name
+            if new_email: m["email"] = new_email
+
+            push(books, members)            # PUSH after update
+            print(f"  ✅ Member updated!")
+            return
+
+    print(f"  ❌ Member ID {member_id} not found.")
+
+
+# ==============================================================
+# MEMBERS — Delete (pull → delete → push)
+# ==============================================================
+def delete_member(books, members):
+    divider("DELETE MEMBER  (pull → delete → push)")
+
+    print("  🔄 Pulling latest data from file...")
+    books[:], members[:] = pull()           # PULL before delete
+
+    view_members(members)
 
     try:
         member_id = int(input("\n  Enter Member ID to delete: "))
@@ -170,13 +246,13 @@ def delete_member(data):
         print("  ❌ Invalid ID.")
         return
 
-    for i, m in enumerate(data["members"]):
+    for i, m in enumerate(members):
         if m["id"] == member_id:
             confirm = input(f"  ⚠️  Delete '{m['name']}'? (yes/no): ").strip().lower()
             if confirm == "yes":
-                data["members"].pop(i)
-                push(data)                  # PUSH after delete
-                print(f"  🗑️  Member '{m['name']}' deleted.")
+                members.pop(i)
+                push(books, members)        # PUSH after delete
+                print(f"  🗑️  '{m['name']}' deleted.")
             else:
                 print("  ❎ Cancelled.")
             return
@@ -185,63 +261,26 @@ def delete_member(data):
 
 
 # ==============================================================
-# D — Update content in the file (pull → modify → push)
-# ==============================================================
-def update_member(data):
-    divider("D — UPDATE MEMBER (pull → edit → push)")
-
-    print("  🔄 Pulling latest data from file...")
-    data.update(pull())                     # PULL latest content
-
-    view_members(data)
-
-    try:
-        member_id = int(input("\n  Enter Member ID to update: "))
-    except ValueError:
-        print("  ❌ Invalid ID.")
-        return
-
-    for m in data["members"]:
-        if m["id"] == member_id:
-            print(f"\n  Current Name  : {m['name']}")
-            print(f"  Current Email : {m['email']}")
-
-            new_name  = input("\n  New Name  (press Enter to keep): ").strip()
-            new_email = input("  New Email (press Enter to keep): ").strip()
-
-            if new_name:
-                m["name"]  = new_name
-            if new_email:
-                m["email"] = new_email
-
-            push(data)                      # PUSH updated content
-            print(f"  ✅ Member updated successfully!")
-            return
-
-    print(f"  ❌ Member ID {member_id} not found.")
-
-
-# ==============================================================
 # MEMBERS SUBMENU
 # ==============================================================
-def members_menu(data):
+def members_menu(books, members):
     while True:
         divider("MEMBERS MENU")
         print("  [1] View All Members")
         print("  [2] Add Member")
-        print("  [3] Search Member")        # NEW
-        print("  [4] Update Member  (D)")   # D — pull/push update
-        print("  [5] Delete Member")        # NEW
+        print("  [3] Search Member")
+        print("  [4] Update Member  (D)")
+        print("  [5] Delete Member")
         print("  [0] Back")
         print("=" * 50)
 
         choice = input("  Choice: ").strip()
 
-        if   choice == "1": view_members(data)
-        elif choice == "2": add_member(data)
-        elif choice == "3": search_member(data)
-        elif choice == "4": update_member(data)
-        elif choice == "5": delete_member(data)
+        if   choice == "1": view_members(members)
+        elif choice == "2": add_member(books, members)
+        elif choice == "3": search_member(books, members)
+        elif choice == "4": update_member(books, members)
+        elif choice == "5": delete_member(books, members)
         elif choice == "0": break
         else: print("  ❌ Invalid choice.")
 
@@ -249,19 +288,19 @@ def members_menu(data):
 
 
 # ==============================================================
-# MAIN MENU
+# MAIN
 # ==============================================================
 def main():
     print("  🔄 Pulling data from file...")
-    data = pull()                           # PULL on startup
-    push(data)                              # PUSH to create file if new
+    books, members = pull()                 # PULL on startup
+    push(books, members)                    # PUSH to create file if new
 
     while True:
         divider("📚 MINI LIBRARY SYSTEM")
-        print(f"  Books  : {len(data['books'])}  |  Members: {len(data['members'])}")
+        print(f"  Books: {len(books)}  |  Members: {len(members)}")
         print("=" * 50)
         print("  [1] Books")
-        print("  [2] Members  (Search + Delete + Update)")
+        print("  [2] Members")
         print("  [0] Exit")
         print("=" * 50)
 
@@ -274,14 +313,14 @@ def main():
                 print("  [2] Add Book")
                 print("  [0] Back")
                 c = input("  Choice: ").strip()
-                if   c == "1": view_books(data)
-                elif c == "2": add_book(data)
+                if   c == "1": view_books(books)
+                elif c == "2": add_book(books, members)
                 elif c == "0": break
                 else: print("  ❌ Invalid.")
                 pause()
 
         elif choice == "2":
-            members_menu(data)
+            members_menu(books, members)
 
         elif choice == "0":
             print("\n  👋 Goodbye! Data saved.\n")
